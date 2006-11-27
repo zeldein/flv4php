@@ -29,10 +29,10 @@ class FLV_Tag_Data extends FLV_Tag_Generic {
 
     function analyze()        
     {
-	    $amf = new FLV_Util_AMFUnserialize( $this->body );
-	    
-	    $this->name = $amf->getItem();
-	    $this->value = $amf->getItem();
-	}
+        $amf = new FLV_Util_AMFUnserialize( $this->body );
+        
+        $this->name = $amf->getItem();
+        $this->value = $amf->getItem();
+    }
 }
 ?>
