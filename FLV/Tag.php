@@ -25,7 +25,7 @@ include_once FLV_INCLUDE_PATH . 'Tag/Data.php';
 
 
 class FLV_Tag {
-	
+    
     const TYPE_AUDIO = 0x08;
     const TYPE_VIDEO = 0x09;
     const TYPE_DATA = 0x12;
@@ -34,23 +34,23 @@ class FLV_Tag {
     /**
      * Static Factory method to return the correct tag object
      *
-     * @param string $hdr	The tag header
-     * @return FLV_Tag		A FLV_Tag object or a descendant of it
+     * @param string $hdr   The tag header
+     * @return FLV_Tag      A FLV_Tag object or a descendant of it
      */
     static function getTag( $hdr )
     {   
-    	switch ( ord($hdr[0]) )
-    	{
-    		case self::TYPE_AUDIO:
-    			return new FLV_Tag_Audio( $hdr );
-    		case self::TYPE_VIDEO:
-    			return new FLV_Tag_Video( $hdr );
-    		case self::TYPE_DATA:
-    			return new FLV_Tag_Data( $hdr );
-    		default:
-    			return new FLV_Tag_Generic( $hdr );
-    	}
-    	return null;
+        switch ( ord($hdr[0]) )
+        {
+            case self::TYPE_AUDIO:
+                return new FLV_Tag_Audio( $hdr );
+            case self::TYPE_VIDEO:
+                return new FLV_Tag_Video( $hdr );
+            case self::TYPE_DATA:
+                return new FLV_Tag_Data( $hdr );
+            default:
+                return new FLV_Tag_Generic( $hdr );
+        }
+        return null;
     }
 
 }
