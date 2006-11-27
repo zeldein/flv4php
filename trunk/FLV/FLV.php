@@ -23,25 +23,24 @@ define('FLV_INCLUDE_PATH', dirname(__FILE__) . '/');
 include_once FLV_INCLUDE_PATH . 'Tag.php';
 include_once FLV_INCLUDE_PATH . 'Exceptions.php';
 
-
 /**
  * Parse a .flv file to extract all the 'tag' information
  *
  */
 class FLV {
-	/** The FLV header signature */
-	const FLV_HEADER_SIGNATURE = 'FLV';
-	
-	/** The FLV main header size */
-	const FLV_HEADER_SIZE = 9;
-	
+    /** The FLV header signature */
+    const FLV_HEADER_SIGNATURE = 'FLV';
+    
+    /** The FLV main header size */
+    const FLV_HEADER_SIZE = 9;
+    
     /** The FLV tag header size */
     const TAG_HEADER_SIZE = 15;
     
     /** 
-		Maximun number of bytes to process as tag body. This is a safety meassure against
-		corrupted FLV files.
-	*/
+    	Maximun number of bytes to process as tag body. This is a safety meassure against
+    	corrupted FLV files.
+    */
     const MAX_TAG_BODY_SIZE = 16386;
 	
     private $fp;
@@ -59,7 +58,7 @@ class FLV {
     {
         $this->fp = @fopen( $fname, 'r' );
         if (! $this->fp) 
-        	throw( new FLV_FileException('Unable to open the file') );
+			throw( new FLV_FileException('Unable to open the file') );
         
 		$hdr = fread( $this->fp, self::FLV_HEADER_SIZE );
 		
