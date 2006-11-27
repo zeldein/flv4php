@@ -38,11 +38,11 @@ class FLV {
     const TAG_HEADER_SIZE = 15;
     
     /** 
-    	Maximun number of bytes to process as tag body. This is a safety meassure against
-    	corrupted FLV files.
-    */
+     *  Maximun number of bytes to process as tag body. This is a safety meassure against
+     *  corrupted FLV files.
+     */
     const MAX_TAG_BODY_SIZE = 16386;
-	
+    
     private $fp;
     private $lastTagSize = 0;
     
@@ -51,36 +51,36 @@ class FLV {
      *
      * @throws FLV_FileException, FLV_NotValidFileException
      * 
-     * @param string $fname	The filename to open
+     * @param string $fname The filename to open
      * @return true on success
      */
     function open( $fname )
     {
         $this->fp = @fopen( $fname, 'r' );
-        if (! $this->fp) 
-			throw( new FLV_FileException('Unable to open the file') );
+        if (! $this->fp)
+            throw( new FLV_FileException('Unable to open the file') );
         
-		$hdr = fread( $this->fp, self::FLV_HEADER_SIZE );
-		
-		//check file header signature
-		if ( substr($hdr, 0, 3) !== self::FLV_HEADER_SIGNATURE )
-			throw( new FLV_NotValidFileException('The header signature does not match') );
-			
+        $hdr = fread( $this->fp, self::FLV_HEADER_SIZE );
+        
+        //check file header signature
+        if ( substr($hdr, 0, 3) !== self::FLV_HEADER_SIGNATURE )
+            throw( new FLV_NotValidFileException('The header signature does not match') );
+            
 
-		$this->version = ord($hdr[3]);
-		$this->hasVideo = (bool)(ord($hdr[4]) & 0x01);
-		$this->hasAudio = (bool)(ord($hdr[4]) & 0x04);
-		
-		$this->bodyOfs =	(ord($hdr[5]) << 24) +
-							(ord($hdr[6]) << 16) +
-							(ord($hdr[7]) << 8) +
-							(ord($hdr[8]));
+        $this->version = ord($hdr[3]);
+        $this->hasVideo = (bool)(ord($hdr[4]) & 0x01);
+        $this->hasAudio = (bool)(ord($hdr[4]) & 0x04);
+        
+        $this->bodyOfs =    (ord($hdr[5]) << 24) +
+                            (ord($hdr[6]) << 16) +
+                            (ord($hdr[7]) << 8) +
+                            (ord($hdr[8]));
 
-		fseek( $this->fp, $this->bodyOfs );
-		
-		$this->eof = false;
-		
-		return true;
+        fseek( $this->fp, $this->bodyOfs );
+        
+        $this->eof = false;
+        
+        return true;
     }
     
     /**
@@ -89,7 +89,7 @@ class FLV {
      */
     function close()
     {
-    	fclose( $this->fp );    
+        fclose( $this->fp );    
     }
     
     
@@ -98,7 +98,7 @@ class FLV {
      *
      * @throws FLV_CorruptedFileException
      * 
-     * @param array $skipTagTypes	The tag types contained in this array won't be examined
+     * @param array $skipTagTypes   The tag types contained in this array won't be examined
      * @return FLV_Tag_Generic or one of its descendants
      */
     function getTag( $skipTagTypes = false )
@@ -107,49 +107,49 @@ class FLV {
 
         
         $hdr = fread( $this->fp, self::TAG_HEADER_SIZE );
-		if (strlen($hdr) < self::TAG_HEADER_SIZE)
-		{
-		    $this->eof = true;
-		   	return null;
-		}
-		
-		// check against corrupted files
-		$prevTagSize = unpack( 'Nprev', $hdr );		
-		if ($prevTagSize['prev'] != $this->lastTagSize)
-		{
-			throw( 
-				new FLV_CorruptedFileException(  
-					sprintf(	"Previous tag size check failed. Actual size is %d but defined size is %d",
-								$this->lastTagSize,
-								$prevTagSize['prev']
-					)
-				)
-			);
-		}
-		
-		// Get the tag object by skiping the first 4 bytes which tell the previous tag size
-		$tag = FLV_Tag::getTag( substr( $hdr, 4 ) );
+        if (strlen($hdr) < self::TAG_HEADER_SIZE)
+        {
+            $this->eof = true;
+            return null;
+        }
+        
+        // check against corrupted files
+        $prevTagSize = unpack( 'Nprev', $hdr );     
+        if ($prevTagSize['prev'] != $this->lastTagSize)
+        {
+            throw( 
+                new FLV_CorruptedFileException(  
+                    sprintf(    "Previous tag size check failed. Actual size is %d but defined size is %d",
+                                $this->lastTagSize,
+                                $prevTagSize['prev']
+                    )
+                )
+            );
+        }
+        
+        // Get the tag object by skiping the first 4 bytes which tell the previous tag size
+        $tag = FLV_Tag::getTag( substr( $hdr, 4 ) );
 
-		
-		// Read at most MAX_TAG_BODY_SIZE bytes of the body
-		$bytesToRead = min( self::MAX_TAG_BODY_SIZE, $tag->size );
-		$tag->setBody( fread( $this->fp, $bytesToRead ) );
-		
-		// Check if the tag body has to be processed
-		if ( is_array($skipTagTypes) && !in_array( $tag->type, $skipTagTypes ) )
-		{
-			$tag->analyze();
-		}
-			
-		// If the tag was skipped or the body size was larger than MAX_TAG_BODY_SIZE
-		if ($tag->size > $bytesToRead)
-		{
-			fseek( $this->fp, $tag->size-$bytesToRead, SEEK_CUR );
-		}
+        
+        // Read at most MAX_TAG_BODY_SIZE bytes of the body
+        $bytesToRead = min( self::MAX_TAG_BODY_SIZE, $tag->size );
+        $tag->setBody( fread( $this->fp, $bytesToRead ) );
+        
+        // Check if the tag body has to be processed
+        if ( is_array($skipTagTypes) && !in_array( $tag->type, $skipTagTypes ) )
+        {
+            $tag->analyze();
+        }
+            
+        // If the tag was skipped or the body size was larger than MAX_TAG_BODY_SIZE
+        if ($tag->size > $bytesToRead)
+        {
+            fseek( $this->fp, $tag->size-$bytesToRead, SEEK_CUR );
+        }
 
-		$this->lastTagSize = $tag->size + self::TAG_HEADER_SIZE - 4;
-			
-		return $tag;
+        $this->lastTagSize = $tag->size + self::TAG_HEADER_SIZE - 4;
+            
+        return $tag;
     }
     
     
@@ -160,7 +160,7 @@ class FLV {
      */
     function getTagOffset()
     {
-    	return ftell($this->fp) - $this->lastTagSize;
+        return ftell($this->fp) - $this->lastTagSize;
     }
 }
 
