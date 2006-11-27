@@ -41,58 +41,58 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
     
     function analyze()        
     {
-		$bits = new FLV_Util_BitStreamReader( $this->body );
+        $bits = new FLV_Util_BitStreamReader( $this->body );
 
-		$this->frametype = $bits->getInt( 4 );
-		
-		$this->codec = $bits->getInt(4); 
-		switch ($this->codec)
-		{
-		    case self::CODEC_SORENSON_H263 :
-		    
-		    	//skip video packet header
-		    	$bits->seek( 17+5+8, SEEK_CUR );
+        $this->frametype = $bits->getInt( 4 );
+        
+        $this->codec = $bits->getInt(4); 
+        switch ($this->codec)
+        {
+            case self::CODEC_SORENSON_H263 :
+            
+                //skip video packet header
+                $bits->seek( 17+5+8, SEEK_CUR );
 
-		    	switch ($bits->getInt(3))
-		    	{
-		    	    case 0x00:
-		    	        $this->width = $bits->getInt(8);
-		    	        $this->height = $bits->getInt(8);
-		    	    break;
-		    	    case 0x01:
-		    	        $this->width = $bits->getInt(16);
-		    	        $this->height = $bits->getInt(16);
-		    	    break;
-		    	    case 0x02: //CIF
-		    			$this->width = 352;
-		    			$this->height = 288;
-		    		break;
-		    	    case 0x03: //QCIF
-		    			$this->width = 176;
-		    			$this->height = 155;
-		    		break;
-		    	    case 0x04: //SQCIF
-		    			$this->width = 128;
-		    			$this->height = 96;
-		    		break;
-		    	    case 0x05: 
-		    			$this->width = 320;
-		    			$this->height = 240;
-		    		break;
-		    	    case 0x06: 
-		    			$this->width = 160;
-		    			$this->height = 120;
-		    		break;
-		    	}
-		    break;
-		    
-	   	    case self::CODEC_SCREENVIDEO_2 :
-	   	    
-	   	    	$this->width = $bits->getInt(12);
-	   	    	$this->height = $bits->getInt(12);	   	        
-	   	    	
-	   	    break;
-		}
+                switch ($bits->getInt(3))
+                {
+                    case 0x00:
+                        $this->width = $bits->getInt(8);
+                        $this->height = $bits->getInt(8);
+                    break;
+                    case 0x01:
+                        $this->width = $bits->getInt(16);
+                        $this->height = $bits->getInt(16);
+                    break;
+                    case 0x02: //CIF
+                        $this->width = 352;
+                        $this->height = 288;
+                    break;
+                    case 0x03: //QCIF
+                        $this->width = 176;
+                        $this->height = 155;
+                    break;
+                    case 0x04: //SQCIF
+                        $this->width = 128;
+                        $this->height = 96;
+                    break;
+                    case 0x05: 
+                        $this->width = 320;
+                        $this->height = 240;
+                    break;
+                    case 0x06: 
+                        $this->width = 160;
+                        $this->height = 120;
+                    break;
+                }
+            break;
+            
+            case self::CODEC_SCREENVIDEO_2 :
+            
+                $this->width = $bits->getInt(12);
+                $this->height = $bits->getInt(12);              
+                
+            break;
+        }
     }
 }
 
