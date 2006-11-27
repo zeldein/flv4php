@@ -32,7 +32,7 @@ class FLV {
 	/** The FLV header signature */
 	const FLV_HEADER_SIGNATURE = 'FLV';
 	
-    /** The FLV main header size */
+	/** The FLV main header size */
 	const FLV_HEADER_SIZE = 9;
 	
     /** The FLV tag header size */
