@@ -43,7 +43,7 @@ class FLV {
      */
     const MAX_TAG_BODY_SIZE = 16386;
     
-    private $fp;
+    protected $fp;
     private $lastTagSize = 0;
     
     /**
