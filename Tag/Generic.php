@@ -26,7 +26,6 @@ class FLV_Tag_Generic {
     
     var $body;
 
-//    function __construct( $hdr )
     function FLV_Tag_Generic( $hdr )
     {
         $p = 0;

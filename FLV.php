@@ -33,7 +33,6 @@ define('FLV_HEADER_SIZE', 9);
 
 /**
 * Parse a .flv file to extract all the 'tag' information
-*
 */
 class FLV {
 	/** The FLV header signature */
@@ -67,6 +66,11 @@ class FLV {
 		return false;
     }
 	
+	/*
+	*
+	* @param string $fname	Locatsion off file
+	* @return true/false	if sucess/failed.
+	*/
     function open( $fname = false )
     {
 		if($fname) {
@@ -96,24 +100,17 @@ class FLV {
     }
 	
 	/**
-	* Opens a FLV video file to process its information
-	*
-	* @throws FLV_FileException, FLV_NotValidFileException
-	* 
-	* @param string $fname	The filename to open
-	* @return true on success
+	* Move to behining off the File ( after first header )
 	*/
     function start()
     {
 		fseek( $this->fh, $this->bodyOfs );
 		$this->eof = false;
-		return true;
     }
     
     /**
-     * Close a previously open FLV file
-     *
-     */
+	* Close a previously open FLV file
+	*/
     function close()
     {
     	fclose( $this->fh );    
@@ -162,6 +159,10 @@ class FLV {
 
 	/**
 	* Returns the MetaData Tag
+	*
+	* @param array $newMetaData		Array off new metadata
+	* @param string $merge			Merge original array with new one
+	* @return string				New Metadata + next tag's previous size
 	*/
     function createMedaData($newMetaData = false,$merge = true)
     {
@@ -192,7 +193,12 @@ class FLV {
     }
 	
 	/**
-	* Play the flv 
+	* Play the flv and close file after
+	*
+	* @param array $limitSpeed		Limit speed off downloading, calculated off videorate + audiorate + $limitSpeed
+	* @param array $seekat			Start playback at..
+	* @param array $newMetaData		Array off new metadata
+	* @param array $merge			Merge original array with new one			
 	*/
     function playFlv($limitSpeed = 0,$seekat = 0,$newMetaData = false,$merge = true)
     {
@@ -240,7 +246,12 @@ class FLV {
     }
 
 	/**
-	* Play the flv  with lock
+	* Play the flv  with lock and close file after
+	*
+	* @param array $limitSpeed		Limit speed off downloading, calculated off videorate + audiorate + $limitSpeed
+	* @param array $seekat			Start playback at..
+	* @param array $newMetaData		Array off new metadata
+	* @param array $merge			Merge original array with new one				
 	*/
     function playFlvLock($limitSpeed = 0,$seekat = 0,$newMetaData = false,$merge = true)
     {
@@ -256,6 +267,10 @@ class FLV {
 	
 	/**
 	* Download Flv
+	*
+	* @param array $limitSpeed		Limit speed off downloading, calculated off videorate + audiorate + $limitSpeed
+	* @param array $newMetaData		Array off new metadata
+	* @param array $merge			Merge original array with new one
 	*/
     function downloadFlv($limitSpeed = 0,$newMetaData = false,$merge = true)
     {
@@ -331,8 +346,6 @@ class FLV {
 
     /**
 	* Returns the next tag from the open file
-	*
-	* @throws FLV_CorruptedFileException
 	* 
 	* @param array $skipTagTypes	The tag types contained in this array won't be examined
 	* @return FLV_Tag_Generic or one of its descendants
@@ -371,11 +384,11 @@ class FLV {
 		return $tag;
     }
     
-    /**
-     * Returns the offset from the start of the file of the last processed tag
-     *
-     * @return the offset
-     */
+	/**
+	* Returns the offset from the start of the file of the last processed tag
+	*
+	* @return the offset
+	*/
     function getTagOffset()
     {
     	return ftell($this->fh) - $this->lastTagSize;
