@@ -202,6 +202,8 @@ class FLV {
 	*/
     function playFlv($limitSpeed = 0,$seekat = 0,$newMetaData = false,$merge = true)
     {
+//		session_destroy();
+		session_write_close();		
 		$this->setHeader();
 		
 		header("Content-Disposition: filename=".basename($this->filename));		
@@ -218,6 +220,7 @@ class FLV {
 			if(!is_array($newMetaData)) {
 				$newMetaData = array();
 				$newMetaData['metadatacreator'] = 'FLV Editor for PHP '.FLV_VERSION;
+				$newMetaData['creator'] = 'FLV Editor for PHP '.FLV_VERSION;				
 				$newMetaData['metadatadate'] = gmdate('Y-m-d\TH:i:s') . '.000Z';
 			}
 
@@ -232,12 +235,12 @@ class FLV {
 		}
 		
 		set_time_limit(0);
-		print(fread($this->fh, 50000));		
+		print(fread($this->fh, 50000));
 		while(!feof($this->fh)) {
 			if ($limitSpeed) {
 				print(fread($this->fh, round($limitSpeed*(1024/32))));
 				flush();
-				 usleep(31250);
+				usleep(31250);
 			 } else {
 				print(fread($this->fh, 1024));			 
 			 }
@@ -257,12 +260,73 @@ class FLV {
     {
 		if ( $_SESSION[FLV_SECRET_KEY] == true ) {
 			$this->closeLock();
-			session_destroy();
 			$this->playFlv($limitSpeed,$seekat,$newMetaData,$merge);
 		} else {
 			$this->close();
 			die(header("HTTP/1.0 404 Not Found"));
 		}
+	}
+	
+	/**
+	* Get Flv Thumb output's a thumb clip from offset point, locate a keyframe and from there output's duration
+	* if no keyframefouned it use the first keyframe.
+	*
+	* @param int $offset			Offset in ms
+	* @param int $duratsion			Duratsion in ms
+	*/
+    function getFlvThumb($offset=2000,$duration=2000) {
+//		session_destroy();
+		session_write_close();
+		$this->setHeader();
+	
+		header("Content-Disposition: filename=".basename($this->filename));		
+
+		print("FLV");
+		print(pack('C', 1 ));
+		print(pack('C', 1 ));
+		print(pack('N', 9 ));
+		print(pack('N', 9 ));
+		
+		$this->start();
+		while ($tag = $this->getTag($skipTagTypes)) {
+			if ( $tag->type == FLV_TAG_TYPE_VIDEO ) {
+				if (!$fhpos && $tag->timestamp >= $offset && $tag->frametype == 1 ) {
+					$fhpos = $this->getTagOffset();
+				} else if ($fhpos) {
+					if ($tag->timestamp >= ($duration+$offset)) {
+						$fhposend = $this->getTagOffset();
+						break;
+					}
+				}
+			}
+			//Does it actually help with memory allocation?
+			unset($tag);
+		}
+
+		if(!$fhposend) {
+			$offset = $fhposend = $fhpos = $count = 0;
+			$this->start();			
+			while ($tag = $this->getTag($skipTagTypes)) {
+				if ( $tag->type == FLV_TAG_TYPE_VIDEO ) {
+					if (!$fhpos && $tag->timestamp >= $offset && $tag->frametype == 1 ) {
+						$fhpos = $this->getTagOffset();
+					} else if ($fhpos) {
+						$count++;
+						if ($tag->timestamp >= ($duration+$offset) && $count >= 1 ) {
+							$fhposend = $this->getTagOffset();
+							break;
+						}
+					}
+				}
+				//Does it actually help with memory allocation?
+				unset($tag);
+			}
+		}
+		
+		fseek($this->fh, 0);
+		fseek($this->fh, $fhpos);
+		print(fread($this->fh, $fhposend));
+		$this->close();		
 	}
 	
 	/**
@@ -274,6 +338,8 @@ class FLV {
 	*/
     function downloadFlv($limitSpeed = 0,$newMetaData = false,$merge = true)
     {
+//		session_destroy();
+		session_write_close();	
 		$this->setHeader();
 
 		header("Content-Disposition: attachment; filename=".basename($this->filename));		
@@ -365,7 +431,7 @@ class FLV {
 		// check against corrupted files
 		$prevTagSize = unpack( 'Nprev', $hdr );
 
-		if ($prevTagSize['prev'] != $this->lastTagSize) die("<br>Previous tag size check failed. Actual size is ".$this->lastTagSize." but defined size is ".$prevTagSize['prev']);
+//		if ($prevTagSize['prev'] != $this->lastTagSize) die("<br>Previous tag size check failed. Actual size is ".$this->lastTagSize." but defined size is ".$prevTagSize['prev']);
 		
 		// Get the tag object by skiping the first 4 bytes which tell the previous tag size
 		$tag = FLV_Tag::getTag( substr( $hdr, 4 ) );
@@ -375,10 +441,12 @@ class FLV {
 		$tag->setBody( fread( $this->fh, $bytesToRead ) );
 		
 		// Check if the tag body has to be processed
-		if ( is_array($skipTagTypes) && !in_array( $tag->type, $skipTagTypes ) ) $tag->analyze();
+		if ( ( is_array($skipTagTypes) && !in_array( $tag->type, $skipTagTypes ) ) || !$skipTagTypes ) $tag->analyze();
 		
 		// If the tag was skipped or the body size was larger than MAX_TAG_BODY_SIZE
-		if ($tag->size > $bytesToRead) fseek( $this->fh, $tag->size-$bytesToRead, SEEK_CUR );
+		if ($tag->size > $bytesToRead) {
+			fseek( $this->fh, $tag->size-$bytesToRead, SEEK_CUR );		
+		}
 
 		$this->lastTagSize = $tag->size + $this->TAG_HEADER_SIZE - 4;
 		return $tag;

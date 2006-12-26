@@ -43,9 +43,9 @@ class FLV_Tag {
      */
     function getTag( $hdr )
     {
-    	switch ( ord($hdr[0]) )
+   	switch ( ord($hdr[0]) )
     	{
-    		case FLV_TAG_TYPE_AUDIO:			
+    		case FLV_TAG_TYPE_AUDIO:
     			return new FLV_Tag_Audio( $hdr );
     		case FLV_TAG_TYPE_VIDEO:
     			return new FLV_Tag_Video( $hdr );
