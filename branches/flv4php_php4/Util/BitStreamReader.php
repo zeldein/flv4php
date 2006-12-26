@@ -34,6 +34,10 @@ class FLV_Util_BitStreamReader {
 	 *
 	 * @param string $data	An optional binary string
 	 */
+	function FLV_Util_BitStreamReader( $data = '' )
+	{
+	    $this->__construct( $data );
+	}
 	function __construct( $data = '' )
 	{
 	    $this->setPayload( $data );

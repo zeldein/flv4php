@@ -48,13 +48,13 @@ class FLV_Tag_Generic {
     
     function setBody( $body )
     {
-    	$this->body = $body;
-    }        
-    
+	   	$this->body = $body;
+    }
+
     function analyze()
     {
 		// nothing to do for a generic tag
-    }        
+    }
 }
 
 ?>

@@ -38,22 +38,24 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
     var $width;
     var $height;
     
-    
-    function analyze()        
+    function analyze()
     {
 		$bits = new FLV_Util_BitStreamReader( $this->body );
 
 		$this->frametype = $bits->getInt( 4 );
 		
 		$this->codec = $bits->getInt(4); 
+
 		switch ($this->codec)
 		{
 		    case $this->CODEC_SORENSON_H263 :
 		    
 		    	//skip video packet header
 		    	$bits->seek( 17+5+8, SEEK_CUR );
+				
+				$type = $bits->getInt(3);
 
-		    	switch ($bits->getInt(3))
+		    	switch ($type)
 		    	{
 		    	    case 0x00:
 		    	        $this->width = $bits->getInt(8);
@@ -86,12 +88,22 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
 		    	}
 		    break;
 		    
-	   	    case $this->CODEC_SCREENVIDEO_2 :
-	   	    
-	   	    	$this->width = $bits->getInt(12);
-	   	    	$this->height = $bits->getInt(12);	   	        
-	   	    	
+	   	    case $this->CODEC_SORENSON :
 	   	    break;
+			
+	   	    case $this->CODEC_ON2_VP6 :
+	   	    break;
+			
+	   	    case $this->CODEC_ON2_VP6ALPHA :
+	   	    break;
+			
+	   	    case $this->CODEC_SCREENVIDEO_2 :	   	    
+	   	    	$this->width = $bits->getInt(12);
+	   	    	$this->height = $bits->getInt(12);
+	   	    break;
+			
+			default :
+			break;
 		}
     }
 }
