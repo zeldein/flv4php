@@ -57,11 +57,10 @@ class FLV {
   	var $fh;
     var $lastTagSize = 0;
     
-    function FLV( $fname = false )
+    function FLV( $fname = false, $timeout = 30 )
     {
 		if($fname) {
-			$this->open($fname);
-			return true;
+			return $this->open($fname,$timeout);
 		}
 		return false;
     }
@@ -69,14 +68,29 @@ class FLV {
 	/*
 	*
 	* @param string $fname	Locatsion off file
+	* @param int $timeout	Script Time out default 30, when using external ling for downloading..
 	* @return true/false	if sucess/failed.
 	*/
-    function open( $fname = false )
+    function open( $fname = false, $timeout = 30 )
     {
 		if($fname) {
 			$this->filename = $fname;
-			$this->fh = @fopen( $fname, 'r' );
-			if (!$this->fh) die('Unable to open the file');
+			
+			$url = parse_url($fname);
+			
+			if($url['scheme']) {
+				set_time_limit($timeout);
+				$tempcontent = file_get_contents($fname);
+				if ($tempcontent) {
+					$this->fh = tmpfile();
+					if (!$this->fh) die('Unable to Make temporeary file');
+					fwrite($this->fh, $tempcontent);
+					rewind($this->fh);
+				}
+			} else {
+				$this->fh = @fopen( $fname, 'r' );
+				if (!$this->fh) die('Unable to open the file');
+			}
 		   
 			$hdr = fread( $this->fh, $this->FLV_HEADER_SIZE );
 			//check file header signature
@@ -268,11 +282,11 @@ class FLV {
 	}
 	
 	/**
-	* Get Flv Thumb output's a thumb clip from offset point, locate a keyframe and from there output's duration
-	* if no keyframefouned it use the first keyframe.
+	* Get Flv Thumb output's a thumb clip from offset point, locate a key frame and from there output's duration
+	* if no key frame is found it use the first key frame.
 	*
 	* @param int $offset			Offset in ms
-	* @param int $duratsion			Duratsion in ms
+	* @param int $duration			Duratsion in ms
 	*/
     function getFlvThumb($offset=2000,$duration=2000) {
 //		session_destroy();
