@@ -22,7 +22,7 @@ define('FLV_INCLUDE_PATH', dirname(__FILE__) . '/');
  
 define('FLV_SECRET_KEY', 'flv_key');
 
-define('FLV_VERSION', 'V0.16');
+define('FLV_VERSION', 'V0.20');
 
 require_once(FLV_INCLUDE_PATH . 'Tag.php');
 require_once(FLV_INCLUDE_PATH . 'Util/AMFSerialize.php');
@@ -134,7 +134,6 @@ class FLV {
     	fclose( $this->fh );    
     }
     
-    
 	/**
 	* Returns the MetaData Tag
 	*/
@@ -180,12 +179,10 @@ class FLV {
 	*/
     function createMedaData($newMetaData = false,$merge = true)
     {
-		fseek( $this->fh, $this->bodyOfs );
-
 		//if the metadata is pressent in the file merge it with the generated one
 		$amf = new FLV_Util_AMFSerialize();
 
-		if (!is_array($newMetaData)) {
+		if (is_array($newMetaData)) {
 			if($merge && is_array($this->metadata)) {
 				$newMetaData = array_merge( $this->metadata, $newMetaData );
 				$serMeta = $amf->serialize('onMetaData') . $amf->serialize($newMetaData);
@@ -199,7 +196,7 @@ class FLV {
 		$out = pack('N', 0);									// PreviousTagSize
 		$out.= pack('C', FLV_TAG_TYPE_DATA);					// Type
 		$out.= pack('Cn', "\x00", strlen($serMeta));			// BodyLength assumes it's shorter than 64Kb
-		$out.= pack('N', 0);									// Time stamp (not used)
+		$out.= pack('N', 0);									// Time stamp (not used)	
 		$out.= pack('Cn', 0, 0);								// Stream ID (not used) <---- WHERE IS THIS comming from
 		$out.= $serMeta;										// Metadata Body
 		$out.= pack('N', strlen($serMeta) + 1 + 3 + 4 + 3); 	// PreviousTagSize
@@ -217,35 +214,43 @@ class FLV {
     function playFlv($limitSpeed = 0,$seekat = 0,$newMetaData = false,$merge = true)
     {
 		session_write_close();		
-		$this->setHeader(true);
 		
-		header("Content-Disposition: filename=".basename($this->filename));		
-
-		print("FLV");
-		print(pack('C', 1 ));
-		print(pack('C', 1 ));
-		print(pack('N', 9 ));
-
-		if($seekat != 0) {
-			print(pack('N', 9 ));
+		if ($seekat != 0) {
 	      	fseek($this->fh, $seekat);
 		} else {
-			header("Content-Length: " .(string)(filesize($file)));
-			if(!is_array($newMetaData)) {
+			if (!is_array($newMetaData)) {
 				$newMetaData = array();
 				$newMetaData['metadatacreator'] = 'FLV Editor for PHP '.FLV_VERSION;
 				$newMetaData['creator'] = 'FLV Editor for PHP '.FLV_VERSION;				
 				$newMetaData['metadatadate'] = gmdate('Y-m-d\TH:i:s') . '.000Z';
 			}
-
-			print($this->createMedaData($newMetaData,$merge));
-			fseek($this->fh, 0);											// Rewind the movie
+			$metadata = $this->createMedaData($newMetaData,$merge);
+			rewind($this->fh);											// Rewind the movie
 			fseek($this->fh, $this->metadataend+4);							// Skip the Original metadata
 		}
-		
+
 		if ($limitSpeed) {
 			if ($this->metadata["videodatarate"] || $this->metadata["audiodatarate"]) $limitSpeed = ceil(($this->metadata["videodatarate"]+$this->metadata["audiodatarate"])/8)+$limitSpeed-1;
 			else $limitSpeed = false;
+		}
+		if ($metadata) {
+			$size = strlen($metadata) + ( filesize($this->filename) - ftell($this->fh) ) + 15;
+		} else {
+			$size = filesize($this->filename) - ftell($this->fh) + 15;
+		}
+		$this->setHeader(true,$size);
+		
+		header("Content-Disposition: filename=".basename($this->filename));				
+				
+		print("FLV");
+		print(pack('C', 1 ));
+		print(pack('C', 1 ));
+		print(pack('N', 9 ));
+		
+		if ($seekat) {
+			print(pack('N', 9 ));
+		} else {
+			print($metadata);
 		}
 		
 		set_time_limit(0);
@@ -288,27 +293,19 @@ class FLV {
 	*
 	* @param int $offset			Offset in ms
 	* @param bool $usemetadata		Use metadata to attempt to find first keyframe
+	* @return string				Singel Flv keyframe
 	*/
-    function getFlvThumb($offset=2000,$usemetadata=false) {
+    function getFlvThumb($offset=2000,$usemetadata=true) {
 		session_write_close();
-		$this->setHeader();
-	
-		header("Content-Disposition: filename=".basename($this->filename));		
-
-		print("FLV");
-		print(pack('C', 1 ));
-		print(pack('C', 1 ));
-		print(pack('N', 9 ));
-		print(pack('N', 9 ));
-		
 
 		$this->start();
 		$skipTagTypes = array();
 		$skipTagTypes[FLV_TAG_TYPE_AUDIO] = FLV_TAG_TYPE_AUDIO;
 
-		if($usemetadata && $offset) {
-			foreach( $this->metadata['keyframes']['times'] as $key => $value){
-				if( $value >= ($offset/1000) ) {
+		if ($usemetadata && $offset) {
+			foreach ( $this->metadata['keyframes']['times'] as $key => $value){
+				if ( $value >= ($offset/1000) ) {
+					$offset = $value*1000;				
 					fseek($this->fh,$this->metadata['keyframes']['filepositions'][$key]-4);
 					break;
 				}
@@ -318,8 +315,9 @@ class FLV {
 		while ($tag = $this->getTag($skipTagTypes)) {
 			if ( $tag->type == FLV_TAG_TYPE_VIDEO ) {
 				if ($tag->timestamp >= $offset && $tag->frametype == 1 ) {
-					$fhpos = $this->getTagOffset();
-					$fhposend = $tag->end;
+					rewind($this->fh);
+					fseek($this->fh, $tag->start );
+					$dataOut = fread($this->fh, ( ( $tag->end + 4 ) - $tag->start ) );
 					break;
 				}
 			}
@@ -327,14 +325,15 @@ class FLV {
 			unset($tag);
 		}
 
-		if(!$fhposend) {
-			$offset = $fhposend = $fhpos = 0;
+		if(!$dataOut) {
+			$offset = 0;
 			$this->start();
 			while ($tag = $this->getTag($skipTagTypes)) {
 				if ( $tag->type == FLV_TAG_TYPE_VIDEO ) {
 					if ($tag->timestamp >= $offset && $tag->frametype == 1 ) {
-						$fhpos = $this->getTagOffset();
-						$fhposend = $tag->end;
+						rewind($this->fh);
+						fseek($this->fh, $tag->start);
+						$dataOut = fread($this->fh, ( ( $tag->end + 4 ) - $tag->start ) );
 						break;
 					}
 				}
@@ -343,10 +342,57 @@ class FLV {
 			}
 		}
 		
-		rewind($this->fh);
-		fseek($this->fh, $fhpos);
-		print(fread($this->fh, ($fhposend-$fhpos)));
-		$this->close();		
+		$newMetaData = array();
+		$newMetaData['metadatacreator'] = 'FLV Editor for PHP '.FLV_VERSION;
+		$newMetaData['metadatadate'] = gmdate('Y-m-d\TH:i:s') . '.000Z';
+		$newMetaData['keyframes']['times'][] = 0;
+		$newMetaData['keyframes']['filepositions'][] = 0;
+		$newMetaData['duration'] = 0;
+		
+		$newMetaData['datasize'] = 0;
+		$newMetaData['audiosize'] = 0;		
+		$newMetaData['videosize'] = 0;
+		$newMetaData['filesize'] = 0;
+
+		$newMetaData['audiodatarate'] = 0;
+		$newMetaData['audiocodecid'] = 0;
+
+		$newMetaData['lastkeyframetimestamp'] = 0;
+		$newMetaData['lasttimestamp'] = 0;
+		$newMetaData['framerate'] = 0;
+
+		$metadata = $this->createMedaData($newMetaData,true);
+		
+		$sizeMetaData = strlen($metadata);
+		
+		$newMetaData = array();
+		$newMetaData['metadatacreator'] = 'FLV Editor for PHP '.FLV_VERSION;
+		$newMetaData['metadatadate'] = gmdate('Y-m-d\TH:i:s') . '.000Z';
+		$newMetaData['keyframes']['times'][] = 0;
+		$newMetaData['keyframes']['filepositions'][] = $sizeMetaData + FLV_HEADER_SIZE;
+		$newMetaData['duration'] = 0;
+		
+		$newMetaData['datasize'] = $sizeMetaData;
+		$newMetaData['audiosize'] = 0;
+		$newMetaData['videosize'] = strlen($dataOut);
+		$newMetaData['filesize'] = $sizeMetaData + strlen($dataOut) + FLV_HEADER_SIZE;
+
+		$newMetaData['audiodatarate'] = 0;
+		$newMetaData['audiocodecid'] = 0;
+
+		$newMetaData['lastkeyframetimestamp'] = 0;
+		$newMetaData['lasttimestamp'] = 0;
+		$newMetaData['framerate'] = 0;		
+		
+		$metadata = $this->createMedaData($newMetaData,true);
+		
+		$this->setHeader(false, ( strlen($metadata) + strlen($dataOut) + FLV_HEADER_SIZE ) );
+	
+		header("Content-Disposition: filename=".basename($this->filename));
+
+		$this->close();
+		
+		return "FLV".pack('C', 1 ).pack('C', 1 ).pack('N', 9 ).$metadata.$dataOut;
 	}
 
 	/**
@@ -356,19 +402,12 @@ class FLV {
 	* @param int $offset			Offset in ms
 	* @param int $duration			Duratsion in ms
 	* @param bool $usemetadata		Use metadata to attempt to find first keyframe
+	* @return string				Flv File preview
 	*/
-    function getFlvPreview($offset=2000,$duration=2000,$usemetadata=false) {
+    function getFlvPreview($offset=2000,$duration=2000,$usemetadata=true) {
 		session_write_close();
 
-		$this->setHeader();
-	
-		header("Content-Disposition: filename=".basename($this->filename));		
-
-		print("FLV");
-		print(pack('C', 1 ));
-		print(pack('C', 1 ));
-		print(pack('N', 9 ));
-		print(pack('N', 9 ));
+		$dataArray = array();
 
 		$this->start();
 		
@@ -378,20 +417,33 @@ class FLV {
 		if($usemetadata && $offset) {
 			foreach( $this->metadata['keyframes']['times'] as $key => $value){
 				if( $value >= ($offset/1000) ) {
+					$offset = $value*1000;
 					fseek($this->fh,$this->metadata['keyframes']['filepositions'][$key]-4);
 					break;
 				}
 			}
 		}
-		
+		$endFouned = false;
+		$lastKeyframe = $startTimestamp = $endTimestamp = 0;
 		while ($tag = $this->getTag($skipTagTypes)) {
 			if ( $tag->type == FLV_TAG_TYPE_VIDEO ) {
-				if (!$fhpos && $tag->timestamp >= $offset && $tag->frametype == 1 ) {
-					$fhpos = $this->getTagOffset();
-					$timestamp = $tag->timestamp;
-				} else if ($fhpos) {
-					if ($tag->timestamp >= ($duration+$timestamp)) {
-						$fhposend = $tag->end;
+				if (!$dataArray && $tag->timestamp >= $offset && $tag->frametype == 1 ) {
+					$startTimestamp = $timestamp = $tag->timestamp;
+					rewind($this->fh);
+					fseek($this->fh, ( $tag->start ) );
+					$dataArray[] = fread($this->fh, (  $tag->end - ( $tag->start ) ) );					
+					rewind($this->fh);
+					fseek($this->fh, $tag->end);
+				} elseif ($dataArray) {
+					$endTimestamp = $tag->timestamp;
+					if($tag->frametype == 1) $lastKeyframe = $tag->timestamp;					
+					rewind($this->fh);
+					fseek($this->fh, ( $tag->start ) );					
+					$dataArray[] = fread($this->fh, ( $tag->end - ( $tag->start) ) );
+					rewind($this->fh);
+					fseek($this->fh, $tag->end);
+					if ($tag->timestamp >= ($duration+$timestamp) ) {
+						$endFouned = true;
 						break;
 					}
 				}
@@ -400,31 +452,106 @@ class FLV {
 			//Does it actually help with memory allocation?
 			unset($tag);
 		}
-
-		if(!$fhposend) {
-			$offset = $fhposend = $fhpos = 0;
+		
+		if(!$endFouned) {
+			unset($dataArray);
+			$offset = $lastKeyframe = $startTimestamp = $endTimestamp = 0;
+			
 			$this->start();
 			while ($tag = $this->getTag($skipTagTypes)) {
 				if ( $tag->type == FLV_TAG_TYPE_VIDEO ) {
-					if (!$fhpos && $tag->timestamp >= $offset && $tag->frametype == 1 ) {
-						$fhpos = $this->getTagOffset();
-						$timestamp = $tag->timestamp;						
-					} else if ($fhpos) {
-						$fhposend = $tag->end;
-						if ($tag->timestamp >= ($duration+$timestamp) ) {
-							break;
-						}
+					if (!$dataArray && $tag->timestamp >= $offset && $tag->frametype == 1 ) {
+						$startTimestamp = $timestamp = $tag->timestamp;
+						rewind($this->fh);
+						fseek($this->fh, ( $tag->start ) );
+						$dataArray[] = fread($this->fh, (  $tag->end - ( $tag->start ) ) );
+						rewind($this->fh);
+						fseek($this->fh, $tag->end);			
+					} else if ($dataArray) {
+						$endTimestamp = $tag->timestamp;
+						if($tag->frametype == 1) $lastKeyframe = $tag->timestamp;						
+						rewind($this->fh);
+						fseek($this->fh, ( $tag->start ) );
+						$dataArray[] = fread($this->fh, (  $tag->end - ( $tag->start ) ) );
+						rewind($this->fh);
+						fseek($this->fh, $tag->end);
+						if ($tag->timestamp >= ($duration+$timestamp) )	break;
 					}
 				}
 				//Does it actually help with memory allocation?
 				unset($tag);
 			}
 		}
-				
-		rewind($this->fh);
-		fseek($this->fh, $fhpos);
-		print(fread($this->fh, ($fhposend-$fhpos)));
+
+		$dataOut = '';
+		$lastSize = 0;
+		foreach( $dataArray as $key => $value) {
+			if($key) {
+				$dataOut = $dataOut.pack('N', $lastSize ).$value;			
+			} else {
+				$dataOut = $value;
+			}
+			$lastSize = strlen($value);
+		}
+
+		$newMetaData = array();
+		$newMetaData['metadatacreator'] = 'FLV Editor for PHP '.FLV_VERSION;
+		$newMetaData['metadatadate'] = gmdate('Y-m-d\TH:i:s') . '.000Z';
+		
+		$newMetaData['keyframes']['times'][] = 0;
+		$newMetaData['keyframes']['filepositions'][] = 0;
+		
+		$newMetaData['duration'] = ( $endTimestamp - $startTimestamp ) / 1000;
+
+		$newMetaData['datasize'] = 0;
+		$newMetaData['audiosize'] = 0;		
+		$newMetaData['videosize'] = 0;
+		$newMetaData['filesize'] = 0;
+
+		$newMetaData['audiodatarate'] = 0;
+		$newMetaData['audiocodecid'] = 0;
+		
+		$newMetaData['hasmetadata'] = true;
+		$newMetaData['haskeyframes'] = true;		
+	
+		$newMetaData['lastkeyframetimestamp'] = $lastKeyframe;
+		$newMetaData['lasttimestamp'] = ( $endTimestamp - $startTimestamp ) / 1000;
+		
+		$metadata = $this->createMedaData($newMetaData,true);
+		
+		$sizeMetaData = strlen($metadata);
+		
+		$newMetaData = array();
+		$newMetaData['metadatacreator'] = 'FLV Editor for PHP '.FLV_VERSION;
+		$newMetaData['metadatadate'] = gmdate('Y-m-d\TH:i:s') . '.000Z';
+		
+		$newMetaData['keyframes']['times'][] = 0;
+		$newMetaData['keyframes']['filepositions'][] = $sizeMetaData + FLV_HEADER_SIZE;
+
+		$newMetaData['duration'] = ( $endTimestamp - $startTimestamp ) / 1000;
+
+		$newMetaData['datasize'] = $sizeMetaData;
+		$newMetaData['audiosize'] = 0;
+		$newMetaData['videosize'] = strlen($dataOut);
+		$newMetaData['filesize'] = $sizeMetaData + strlen($dataOut) + FLV_HEADER_SIZE;
+
+		$newMetaData['audiodatarate'] = 0;
+		$newMetaData['audiocodecid'] = 0;
+		
+		$newMetaData['hasmetadata'] = true;
+		$newMetaData['haskeyframes'] = true;
+		
+		$newMetaData['lastkeyframetimestamp'] = $lastKeyframe;
+		$newMetaData['lasttimestamp'] = ( $endTimestamp - $startTimestamp ) / 1000;
+		
+		$metadata = $this->createMedaData($newMetaData,true);		
+
+		$this->setHeader(false, ( strlen($metadata) +  strlen($dataOut) + FLV_HEADER_SIZE ) );
+
+		header("Content-Disposition: filename=".basename($this->filename));		
+
 		$this->close();
+		return "FLV".pack('C', 1 ).pack('C', 1 ).pack('N', 9 ).$metadata.$dataOut;		
 	}
 
 	/**
@@ -437,7 +564,7 @@ class FLV {
     function downloadFlv($limitSpeed = 0,$newMetaData = false,$merge = true)
     {
 		session_write_close();	
-		$this->setHeader(true);
+		$this->setHeader(true,filesize($this->filename));
 
 		header("Content-Disposition: attachment; filename=".basename($this->filename));		
 
@@ -453,7 +580,7 @@ class FLV {
 		}
 
 		print($this->createMedaData($newMetaData,$merge));
-		fseek($this->fh, 0);											// Rewind the movie
+		rewind($this->fh);												// Rewind the movie
 		fseek($this->fh, $this->metadataend+4);							// Skip the Original metadata
 		
 		if ($limitSpeed) {
@@ -479,11 +606,11 @@ class FLV {
 	*
 	* @param bool $nocashe			Use No Cashe ?
 	*/
-    function setHeader($nocashe=false)
+    function setHeader($nocashe=false,$size=0)
     {
 		header("Content-Type: video/x-flv");
-//		header("Content-Length: " .(string)(filesize($this->filename)) );
-		if($nocashe){
+		header("Content-Length: " .(string)$size );
+		if($nocashe) {
 			// Date in the past
 			header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
 			// always modified
@@ -637,10 +764,9 @@ class FLV {
 
 		$this->lastTagSize = $tag->size + $this->TAG_HEADER_SIZE - 4;
 		
-		
 		$tag->start = $this->getTagOffset();
 		
-		$tag->end = ftell($this->fh)+4;
+		$tag->end = ftell($this->fh);
 		
 		return $tag;
     }
