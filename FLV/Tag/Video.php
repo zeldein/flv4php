@@ -104,7 +104,6 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
                 if ($mode === 0)
                 {
                     $bits->seek(15, SEEK_CUR);
-                    $bits->seek(16, SEEK_CUR);
                     $this->height = $bits->getInt(8) * 16 - $adjH;
                     $this->width = $bits->getInt(8) * 16 - $adjW;
                 }
