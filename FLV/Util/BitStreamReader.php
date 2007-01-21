@@ -49,8 +49,8 @@ class FLV_Util_BitStreamReader {
         $this->data = $data;
         $this->pos = 0;
         $this->bits = '';
-        $this->ofs = 0;
-    }
+        $this->ofs = 0;       
+     }
   
     /**
      * Makes sure we have the requested number of bits in the working buffer
@@ -61,12 +61,12 @@ class FLV_Util_BitStreamReader {
     private function fetch( $cnt )
     {
         // Either we already have the needed bits in the buffer or we rebuild it
-        if ($this->pos < ($this->ofs << 3) ||
-            $this->pos + $cnt > ($this->ofs << 3) + strlen($this->bits) )
+        if ($this->pos < $this->ofs*8 ||
+            $this->pos + $cnt > $this->ofs*8 + strlen($this->bits) )
         {       
             $this->bits = '';
-            $this->ofs = $this->pos >> 3;
-            for ($i = $this->ofs; $i <= $this->ofs + ($cnt >> 3); $i++ )
+            $this->ofs = FLOOR($this->pos/8);
+            for ($i = $this->ofs; $i <= $this->ofs + CEIL($cnt/8); $i++ )
             {
                 $this->bits .= str_pad( decbin(ord($this->data[$i])), 8, '0', STR_PAD_LEFT );
             }
@@ -104,14 +104,14 @@ class FLV_Util_BitStreamReader {
                 $this->pos += $ofs;
             break;
             case SEEK_END:
-                $this->pos -= strlen($this->data)*8 - $ofs;
+                $this->pos = strlen($this->data)*8 + $ofs;
             break;
         }
         
         if ($this->pos < 0)
-            $this->pos;
+            $this->pos = 0;
         elseif ($this->pos > strlen($this->data)*8)
-            $this->pos = $this->data*8;
+            $this->pos = strlen($this->data)*8;
     }
 }
 
