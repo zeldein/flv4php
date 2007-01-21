@@ -103,6 +103,8 @@ class FLV {
      */
     function getTag( $skipTagTypes = false )
     {
+        static $cnt = 0;
+        
         if ($this->eof) return null;
 
         
@@ -113,6 +115,8 @@ class FLV {
             return null;
         }
         
+        /*
+        //DEV: Some files seem to don't store this value!
         // check against corrupted files
         $prevTagSize = unpack( 'Nprev', $hdr );     
         if ($prevTagSize['prev'] != $this->lastTagSize)
@@ -126,6 +130,7 @@ class FLV {
                 )
             );
         }
+		*/
         
         // Get the tag object by skiping the first 4 bytes which tell the previous tag size
         $tag = FLV_Tag::getTag( substr( $hdr, 4 ) );
