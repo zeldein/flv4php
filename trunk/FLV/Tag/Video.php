@@ -86,12 +86,30 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
                 }
             break;
             
+            /* TODO: not tested */
             case self::CODEC_SCREENVIDEO_2 :
             
                 $this->width = $bits->getInt(12);
                 $this->height = $bits->getInt(12);              
                 
             break;
+            
+            // format layout taken from libavcodec project (http://ffmpeg.mplayerhq.hu/)
+            case self::CODEC_ON2_VP6 :
+            case self::CODEC_ON2_VP6ALPHA :
+                
+                $adjW = $bits->getInt(4);
+                $adjH = $bits->getInt(4);
+                $mode = $bits->getInt(1);
+                if ($mode === 0)
+                {
+                    $bits->seek(15, SEEK_CUR);
+                    $bits->seek(16, SEEK_CUR);
+                    $this->height = $bits->getInt(8) * 16 - $adjH;
+                    $this->width = $bits->getInt(8) * 16 - $adjW;
+                }
+                
+             break;
         }
     }
 }
