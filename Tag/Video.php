@@ -34,24 +34,26 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
     var $FRAME_DISPENSABLE = 0x03;
 
     var $codec;
+    var $codec_name;	
     var $frametype;
     var $width;
     var $height;
-    
+	
     function analyze()
     {
-		$bits = new FLV_Util_BitStreamReader( $this->body );
+		$bits = new FLV_Util_BitStreamReader($this->body);
 
-		$this->frametype = $bits->getInt( 4 );
+		$this->frametype = $bits->getInt(4);
 		
-		$this->codec = $bits->getInt(4); 
+		$this->codec = $bits->getInt(4);
+		$this->codec_name = $this->videoCodec($this->codec);
 
 		switch ($this->codec)
 		{
 		    case $this->CODEC_SORENSON_H263 :
 		    
 		    	//skip video packet header
-		    	$bits->seek( 17+5+8, SEEK_CUR );
+		    	$bits->seek(17+5+8, SEEK_CUR);
 				
 				$type = $bits->getInt(3);
 
@@ -91,12 +93,20 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
 	   	    case $this->CODEC_SORENSON :
 	   	    break;
 			
-	   	    case $this->CODEC_ON2_VP6 :
+            // format layout taken from libavcodec project (http://ffmpeg.mplayerhq.hu/)
+            case $this->CODEC_ON2_VP6 :
+            case $this->CODEC_ON2_VP6ALPHA :
+                $adjW = $bits->getInt(4);
+                $adjH = $bits->getInt(4);
+                $mode = $bits->getInt(1);
+                if ($mode === 0) {
+                    $bits->seek(15, SEEK_CUR);
+                    $this->height = $bits->getInt(8) * 16 - $adjH;
+                    $this->width = $bits->getInt(8) * 16 - $adjW;
+                }
 	   	    break;
 			
-	   	    case $this->CODEC_ON2_VP6ALPHA :
-	   	    break;
-			
+			/* TODO: not tested */
 	   	    case $this->CODEC_SCREENVIDEO_2 :	   	    
 	   	    	$this->width = $bits->getInt(12);
 	   	    	$this->height = $bits->getInt(12);
@@ -106,6 +116,17 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
 			break;
 		}
     }
+
+	function videoCodec($id) {
+		$videoCodec = array(
+			$this->CODEC_SORENSON_H263   => 'Sorenson H.263',
+			$this->CODEC_SORENSON => 'Screen video',
+			$this->CODEC_ON2_VP6    => 'On2 VP6',
+			$this->CODEC_ON2_VP6ALPHA    => 'On2 VP6 Alpha',
+			$this->CODEC_SCREENVIDEO_2    => 'Screen Video 2',
+		);
+		return (@$videoCodec[$id] ? @$videoCodec[$id] : false);
+	}	
 }
 
 ?>
