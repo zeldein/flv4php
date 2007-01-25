@@ -64,17 +64,16 @@ class FLV_Util_BitStreamReader {
 	 */
 	function fetch( $cnt )
 	{
-		// Either we already have the needed bits in the buffer or we rebuild it
-		if ($this->pos < ($this->ofs << 3) ||
-			$this->pos + $cnt > ($this->ofs << 3) + strlen($this->bits) )
-		{		
-			$this->bits = '';
-			$this->ofs = $this->pos >> 3;
-			for ($i = $this->ofs; $i <= $this->ofs + ($cnt >> 3); $i++ )
-			{
-				$this->bits .= str_pad( decbin(ord($this->data[$i])), 8, '0', STR_PAD_LEFT );
-			}
-		}
+        if ($this->pos < $this->ofs*8 ||
+            $this->pos + $cnt > $this->ofs*8 + strlen($this->bits) )
+        {       
+            $this->bits = '';
+            $this->ofs = FLOOR($this->pos/8);
+            for ($i = $this->ofs; $i <= $this->ofs + CEIL($cnt/8); $i++ )
+            {
+                $this->bits .= str_pad( decbin(ord($this->data[$i])), 8, '0', STR_PAD_LEFT );
+            }
+        }		
 	}
 	
 	/**
@@ -89,7 +88,7 @@ class FLV_Util_BitStreamReader {
 		$ret = bindec( substr($this->bits, $this->pos-($this->ofs << 3), $cnt) );
 		$this->pos += $cnt;
 		return $ret;
-	}	
+	}
 
 	/**
 	 * Seeks into the bit stream in a similar way to fseek()

@@ -30,7 +30,7 @@ define('FLV_TAG_AUDIO_CODEC_NELLYMOSER', 0x06);
 define('FLV_TAG_AUDIO_FREQ_5KHZ', 0x00);
 define('FLV_TAG_AUDIO_FREQ_11KHZ', 0x01);
 define('FLV_TAG_AUDIO_FREQ_22KHZ', 0x02);
-define('FLV_TAG_AUDIO_FREQ_44KHZ', 0x05);
+define('FLV_TAG_AUDIO_FREQ_44KHZ', 0x03);
 
 define('FLV_TAG_AUDIO_DEPTH_8BITS', 0x00);
 define('FLV_TAG_AUDIO_DEPTH_16BITS', 0x01);
@@ -58,18 +58,66 @@ class FLV_Tag_Audio extends FLV_Tag_Generic {
     var $MODE_STEREO = FLV_TAG_AUDIO_MODE_STEREO;
         
     var $codec;
+    var $codec_name;
     var $frequency;
+    var $frequency_rate;	
     var $depth;
+    var $depth_bit;	
     var $mode;
+    var $mode_name;	
     
     function analyze()        
     {
 		$bits = new FLV_Util_BitStreamReader( $this->body );
 
 		$this->codec = $bits->getInt(4);
+		$this->codec_name = $this->audioFormat($this->codec);
+		
 		$this->frequency = $bits->getInt(2);
-		$this->depth = $bits->getInt(1);       
-		$this->mode = $bits->getInt(1);		
-    }    
+		$this->frequency_rate = $this->audioFormat($this->frequency);
+		
+		$this->depth = $bits->getInt(1);
+		$this->depth_bit = $this->audioBitDepth($this->depth);
+				
+		$this->mode = $bits->getInt(1);
+		$this->mode_name = $this->audioMode($this->mode);
+    }
+
+	function audioFormat($id) {
+		$audioFormat = array(
+			$this->CODEC_UNCOMPRESSED => 'uncompressed',
+			$this->CODEC_ADPCM => 'ADPCM',
+			$this->CODEC_MP3 => 'mp3',
+			$this->CODEC_NELLYMOSER_8K => 'Nellymoser 8kHz mono',
+			$this->CODEC_NELLYMOSER => 'Nellymoser',
+		);
+		return (@$audioFormat[$id] ? @$audioFormat[$id] : false);
+	}
+	
+	function audioRate($id) {
+		$audioRate = array(
+			$this->FREQ_5KHZ =>  5500,
+			$this->FREQ_11KHZ  => 11025,
+			$this->FREQ_22KHZ  => 22050,
+			$this->FREQ_44KHZ  => 44100,
+		);
+		return (@$audioRate[$id] ? @$audioRate[$id] : false);
+	}
+	
+	function audioBitDepth($id) {
+		$audioBitDepth = array(
+			$this->DEPTH_8BITS =>  8,
+			$this->DEPTH_16BITS => 16,
+		);
+		return (@$audioBitDepth[$id] ? @$audioBitDepth[$id] : false);
+	}
+
+	function audioMode($id) {
+		$audioMode = array(
+			$this->MODE_MONO =>  'mono',
+			$this->MODE_STEREO => 'stereo',
+		);
+		return (@$audioMode[$id] ? @$audioMode[$id] : false);
+	}	
 }
 ?>

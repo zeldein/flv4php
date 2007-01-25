@@ -32,9 +32,9 @@ class FLV_Tag_Generic {
         $this->type = ord($hdr[$p++]);
 
 
-        $this->size = 	(ord($hdr[$p++]) << 16) +
-        				(ord($hdr[$p++]) << 8) +
-        				(ord($hdr[$p++]));
+        $this->size = 		(ord($hdr[$p++]) << 16) +
+        					(ord($hdr[$p++]) << 8) +
+        					(ord($hdr[$p++]));
 
         $this->timestamp =	(ord($hdr[$p++]) << 16) +
         					(ord($hdr[$p++]) << 8) +

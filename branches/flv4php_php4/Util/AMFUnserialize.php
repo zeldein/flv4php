@@ -131,7 +131,6 @@ class FLV_Util_AMFUnserialize {
 		//get string length
 		$size = (ord($this->data[$this->pos++]) << 8) +
 				ord($this->data[$this->pos++]);
-		
 		return $this->getSizedString( $size );
 	}
   
