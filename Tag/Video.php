@@ -95,17 +95,32 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
 			
             // format layout taken from libavcodec project (http://ffmpeg.mplayerhq.hu/)
             case $this->CODEC_ON2_VP6 :
-            case $this->CODEC_ON2_VP6ALPHA :
-                $adjW = $bits->getInt(4);
-                $adjH = $bits->getInt(4);
-                $mode = $bits->getInt(1);
-                if ($mode === 0) {
-                    $bits->seek(15, SEEK_CUR);
-                    $this->height = $bits->getInt(8) * 16 - $adjH;
-                    $this->width = $bits->getInt(8) * 16 - $adjW;
-                }
+				if($this->frametype == 1) {			
+					$adjW = $bits->getInt(4);
+					$adjH = $bits->getInt(4);
+					$mode = $bits->getInt(1);
+					if ($mode === 0) {
+						$bits->seek(15, SEEK_CUR);
+						$this->height = $bits->getInt(8) * 16 - $adjH;
+						$this->width = $bits->getInt(8) * 16 - $adjW;
+					}
+				}
 	   	    break;
-			
+
+            case $this->CODEC_ON2_VP6ALPHA :
+				if($this->frametype == 1) {
+					$adjW = $bits->getInt(4);
+					$adjH = $bits->getInt(4);
+					$mode = $bits->getInt(1);
+					// mode is for ? unknown ?
+					if ($mode === 0) {
+						$bits->seek(39, SEEK_CUR);
+						$this->height = $bits->getInt(8) * 16 - $adjH;
+						$this->width = $bits->getInt(8) * 16 - $adjW;					
+					}
+				}
+	   	    break;
+						
 			/* TODO: not tested */
 	   	    case $this->CODEC_SCREENVIDEO_2 :	   	    
 	   	    	$this->width = $bits->getInt(12);

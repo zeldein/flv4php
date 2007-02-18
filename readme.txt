@@ -16,6 +16,9 @@ Adding Suport for playback rate change in fulltime movies or area of it
 
 
 Change Log:
+------18/02-2007------
+Added: Added Support for vp6 codec with alpha level (codec id 5)
+
 ------25/01-2007------
 Added: getid3 added for better video info extracting. (Modifyed version with few "bugs" solved),
 		Founed in (array)$flv->FileInfo[].

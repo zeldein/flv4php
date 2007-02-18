@@ -171,12 +171,21 @@ class getid3_flv
 									$mode = $bits->getInt(1);
 									if ($mode === 0) {
 										$bits->seek(15, SEEK_CUR);
-										$ThisFileInfo['video']['resolution_x'] = $bits->getInt(8) * 16 - $adjH;
-										$ThisFileInfo['video']['resolution_y'] = $bits->getInt(8) * 16 - $adjW;
-//										die($ThisFileInfo['video']['resolution_x']);
+										$ThisFileInfo['video']['resolution_y'] = $bits->getInt(8) * 16 - $adjH;
+										$ThisFileInfo['video']['resolution_x'] = $bits->getInt(8) * 16 - $adjW;
 									}
 								break;
 							case GETID3_FLV_VIDEO_VP6ALPHA:
+									$bits = new BitStreamReader(fread($fd, $DataLength));
+									$adjW = $bits->getInt(4);
+									$adjH = $bits->getInt(4);
+									$mode = $bits->getInt(1);
+									// mode is for ? unknown ?
+									if ($mode === 0) {
+										$bits->seek(39, SEEK_CUR);
+										$ThisFileInfo['video']['resolution_y'] = $bits->getInt(8) * 16 - $adjH;
+										$ThisFileInfo['video']['resolution_x'] = $bits->getInt(8) * 16 - $adjW;
+									}
 								break;
 							case GETID3_FLV_VIDEO_SCREENVIDEO_2:
 	   	    					$ThisFileInfo['video']['resolution_x'] = $bits->getInt(12);
