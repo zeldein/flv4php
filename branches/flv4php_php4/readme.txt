@@ -16,6 +16,9 @@ Adding Suport for playback rate change in fulltime movies or area of it
 
 
 Change Log:
+------31/03-2007------
+Fixed: QCIF video size case 0x03:
+
 ------18/02-2007------
 Added: Added Support for vp6 codec with alpha level (codec id 5)
 

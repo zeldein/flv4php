@@ -34,7 +34,7 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
     var $FRAME_DISPENSABLE = 0x03;
 
     var $codec;
-    var $codec_name;	
+    var $codec_name;
     var $frametype;
     var $width;
     var $height;
@@ -73,7 +73,7 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
 		    		break;
 		    	    case 0x03: //QCIF
 		    			$this->width = 176;
-		    			$this->height = 155;
+		    			$this->height = 144;
 		    		break;
 		    	    case 0x04: //SQCIF
 		    			$this->width = 128;
@@ -91,6 +91,10 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
 		    break;
 		    
 	   	    case $this->CODEC_SORENSON :
+				$bits->seek(4, SEEK_CUR);
+				$this->width = $bits->getInt(12);
+				$bits->seek(4, SEEK_CUR);
+				$this->height = $bits->getInt(12);
 	   	    break;
 			
             // format layout taken from libavcodec project (http://ffmpeg.mplayerhq.hu/)
@@ -112,11 +116,10 @@ class FLV_Tag_Video extends FLV_Tag_Generic {
 					$adjW = $bits->getInt(4);
 					$adjH = $bits->getInt(4);
 					$mode = $bits->getInt(1);
-					// mode is for ? unknown ?
 					if ($mode === 0) {
 						$bits->seek(39, SEEK_CUR);
 						$this->height = $bits->getInt(8) * 16 - $adjH;
-						$this->width = $bits->getInt(8) * 16 - $adjW;					
+						$this->width = $bits->getInt(8) * 16 - $adjW;
 					}
 				}
 	   	    break;
