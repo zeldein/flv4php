@@ -308,7 +308,7 @@ class getid3_id3v1
 			}
 			return false;
 		}
-		return (isset($GenreLookup[$genreid]) ? $GenreLookup[$genreid] : false);
+		return (isset($GenreLookup[$genre]) ? $GenreLookup[$genre] : false);
 	}
 
 	function StandardiseID3v1GenreName($OriginalGenre) {

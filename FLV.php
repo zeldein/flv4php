@@ -61,6 +61,7 @@ class FLV {
   	var $metadata;
   	var $metadataend;
 	
+	var $config;	
   	var $db_link_id;
   	var $lock_key;
   	var $lock_id;
@@ -83,10 +84,10 @@ class FLV {
 	
 	/*
 	*
-	* @param string $fname			Locatsion off file
+	* @param string $fname			Locatsion of file
 	* @param int $timeout			Script Time out default 30, when using external ling for downloading..
 	*
-	* @return true/false			if sucess/failed.
+	* @return true/false			if success/failed.
 	*/
     function open( $fname = false, $timeout = 30 )
     {
@@ -97,19 +98,20 @@ class FLV {
 			$this->_nocashe = false;
 			
 			$url = parse_url($fname);
-			if($url['scheme']) {
+			
+			if(!empty($url['scheme'])) {
 				if( !is_readable(FLV_INCLUDE_PATH) || !is_writable(FLV_INCLUDE_PATH) ) {
 					$this->_die('To Use External files you need to have: '. FLV_INCLUDE_PATH . ' chmod:777 ');
 				} elseif( $this->_tempfilename = tempnam(FLV_INCLUDE_PATH, "FLV") ) {
 					$this->fh = @fopen($this->_tempfilename, "r+");
-					if (!$this->fh) $this->_die('Unable to Open temporeary file');
+					if (!$this->fh) $this->_die('Unable to Open temporary file');
 					$tempcontent = file_get_contents($fname);
 					
 					fwrite($this->fh, $tempcontent);
 					$fname = $this->_tempfilename;
 
 					rewind($this->fh);
-				} else $this->_die('Unable to Make temporeary file');
+				} else $this->_die('Unable to Make temporary file');
 			} else {
 				$this->fh = @fopen( $fname, 'r' );
 				if (!$this->fh) $this->_die('Unable to open the file');
@@ -139,14 +141,14 @@ class FLV {
 	
 			$this->eof = false;
 		
-			$this->getMedaData();
+			$this->getMetaData();
 			return true;
 		}
 		return false;
     }
 	
 	/**
-	* Move to behining off the File ( after first header )
+	* Move to beginning of the File ( after first header )
 	*/
     function start()
     {
@@ -160,7 +162,7 @@ class FLV {
     function close()
     {
     	fclose( $this->fh );
-		unlink($this->_tempfilename);
+		if(!empty($this->_tempfilename)) unlink($this->_tempfilename);
     }
 	
     /**
@@ -178,7 +180,7 @@ class FLV {
 	*
 	* @return object				return metadata object
 	*/
-    function getMedaData()
+    function getMetaData()
     {
 		$this->start();
 
@@ -214,12 +216,12 @@ class FLV {
 	/**
 	* Returns the MetaData Tag
 	*
-	* @param array $newMetaData		Array off new metadata
+    * @param array $newMetaData		Array with new metadata	
 	* @param string $merge			Merge original array with new one
 	*
 	* @return string				New Metadata + next tag's previous size
 	*/
-    function createMedaData($newMetaData = false,$merge = true)
+    function createMetaData($newMetaData = false,$merge = true)
     {
 		//if the metadata is pressent in the file merge it with the generated one
 		$amf = new FLV_Util_AMFSerialize();
@@ -246,9 +248,9 @@ class FLV {
 	/**
 	* Play the flv and close file after
 	*
-	* @param int $limitSpeed		Limit speed off downloading, calculated off videorate + audiorate + $limitSpeed
+    * @param int $limitSpeed		Limit speed of downloading, calculated off videorate + audiorate + $limitSpeed	
 	* @param int $seekat			Start playback at..
-	* @param array $newMetaData		Array off new metadata
+	* @param array $newMetaData		Array with new metadata
 	* @param bool $merge			Merge original array with new one			
 	*/
     function playFlv($limitSpeed = 0,$seekat = 0,$newMetaData = false,$merge = true)
@@ -259,7 +261,7 @@ class FLV {
 	      	fseek($this->fh, $seekat);
 		} else {
 			if (!is_array($newMetaData)) $newMetaData = $this->defaultMetaData();
-			$metadata = $this->createMedaData($newMetaData,$merge);			
+			$metadata = $this->createMetaData($newMetaData,$merge);
 			rewind($this->fh);												// Rewind the movie
 			fseek($this->fh, $this->metadataend+4);							// Skip the Original metadata
 		}
@@ -328,7 +330,7 @@ class FLV {
 	* @param int $offset			Offset in ms
 	* @param bool $usemetadata		Use metadata to attempt to find first keyframe
 	*
-	* @return string				Singel Flv keyframe
+	* @return string				Single Flv keyframe
 	*/
     function getFlvThumb($offset=2000,$usemetadata=true) {
 		session_write_close();
@@ -379,7 +381,7 @@ class FLV {
 			}
 		}
 
-		$newMetaData = $this->defaultMetaData(true);
+		$newMetaData = $this->defaultMetaData(false);
 		unset($newMetaData['keyframes']['times']);
 		$newMetaData['keyframes']['times'][] = 0;
 		//
@@ -388,12 +390,12 @@ class FLV {
 		//
 		$newMetaData['duration'] = $newMetaData['datasize'] = $newMetaData['audiosize'] = $newMetaData['videosize'] = $newMetaData['filesize'] = $newMetaData['audiodatarate'] = $newMetaData['audiocodecid'] = $newMetaData['lastkeyframetimestamp'] = $newMetaData['lasttimestamp'] = $newMetaData['framerate'] = 0;		
 
-		$metadata = $this->createMedaData($newMetaData,true);
+		$metadata = $this->createMetaData($newMetaData,true);
 		
 		$sizeMetaData = strlen($metadata);
 		
 		$newMetaData = array();
-		$newMetaData = $this->defaultMetaData(true);
+		$newMetaData = $this->defaultMetaData(false);
 		unset($newMetaData['keyframes']['times']);
 		$newMetaData['keyframes']['times'][] = 0;
 		//
@@ -405,8 +407,8 @@ class FLV {
 		$newMetaData['datasize'] = $sizeMetaData;
 		$newMetaData['videosize'] = strlen($dataOut);
 		$newMetaData['filesize'] = $sizeMetaData + strlen($dataOut) + FLV_HEADER_SIZE;
-		
-		$metadata = $this->createMedaData($newMetaData,true);
+
+		$metadata = $this->createMetaData($newMetaData,true);
 		
 		$this->setHeader(strlen($metadata) + strlen($dataOut) + FLV_HEADER_SIZE);
 	
@@ -422,15 +424,16 @@ class FLV {
 	* if no key frame is found it use the first key frame.
 	*
 	* @param int $offset			Offset in ms
-	* @param int $duration			Duratsion in ms
+	* @param int $duration			Duration in ms
 	* @param bool $usemetadata		Use metadata to attempt to find first keyframe
-	* @param int $speedModifyer		Playback Speed modifyer
+	* @param int $speedModifyer		Playback Speed modifier
 	*
 	* @return string				Flv File preview
 	*/
     function getFlvPreview($offset=2000,$duration=2000,$usemetadata=true,$speedModifyer=100) {
 		session_write_close();
-		if ($modifyer < 1) $modifyer = 1;
+		$speedModifier = (int) $speedModifier;
+		if ($speedModifier < 1) $speedModifier = 1;
 
 		$dataArray = array();
 		
@@ -546,7 +549,7 @@ class FLV {
 		$newMetaData['lastkeyframetimestamp'] = $lastKeyframe;
 		$newMetaData['lasttimestamp'] = ( $endTimestamp - $startTimestamp ) / 1000;
 		
-		$metadata = $this->createMedaData($newMetaData,true);
+		$metadata = $this->createMetaData($newMetaData,true);
 		
 		$sizeMetaData = strlen($metadata);
 		
@@ -571,14 +574,14 @@ class FLV {
 		$newMetaData['lastkeyframetimestamp'] = $lastKeyframe;
 		$newMetaData['lasttimestamp'] = ( $endTimestamp - $startTimestamp ) / 1000;
 		
-		$metadata = $this->createMedaData($newMetaData,true);		
+		$metadata = $this->createMetaData($newMetaData,true);		
 
 		$this->setHeader(strlen($metadata) +  strlen($dataOut) + FLV_HEADER_SIZE);
 
 		header("Content-Disposition: filename=".basename($this->filename));		
 
 		$this->close();
-		return "FLV".pack('C', 1).pack('C', 1).pack('N', 9).$metadata.$dataOut;		
+		return "FLV".pack('C', 1).pack('C', 1).pack('N', 9).$metadata.$dataOut;
 	}
 
 	/**
@@ -602,7 +605,7 @@ class FLV {
 
 		if(!is_array($newMetaData)) $newMetaData = $this->defaultMetaData();
 
-		print($this->createMedaData($newMetaData,$merge));
+		print($this->createMetaData($newMetaData,$merge));
 		rewind($this->fh);												// Rewind the movie
 		fseek($this->fh, $this->metadataend+4);							// Skip the Original metadata
 		
@@ -668,17 +671,17 @@ class FLV {
 		if(!$key) return false;
 		if(!session_id()) session_start();
 		if($usedb) {
-			include(FLV_INCLUDE_PATH."config.php");		
+			$this->loadConfig();
 			$sid = session_id();
 			$expire = time()+$validtime;
 			$ip = $_SERVER['REMOTE_ADDR'];
 			
 			$this->dbConnect();
 
-			$result = mysql_list_tables ( $config['db_name'] ,$this->$db_link_id);
+			$result = mysql_list_tables ( $this->config['db_name'] ,$this->db_link_id);
 
-			$tableKey = $config['db_table_prefix']."key";
-			$tableBlock = $config['db_table_prefix']."block";
+			$tableKey = $this->config['db_table_prefix']."key";
+			$tableBlock = $this->config['db_table_prefix']."block";
 
 			$maketableKey = true;
 			$maketableBlock = true;
@@ -703,7 +706,7 @@ class FLV {
 			if($rowKey['uid']) $query = "UPDATE ".$tableKey." SET timeout = $expire , ip = '$ip' WHERE uid = ".$rowKey['uid'];
 			else $query = "INSERT INTO ".$tableKey." VALUES ('','$sid','$key','$expire','$ip')";
 			@mysql_query($query);
-			mysql_close($this->$db_link_id);			
+			mysql_close($this->db_link_id);			
 		} else {
 			$_SESSION[FLV_SECRET_KEY][$key] = time()+$validtime;
 		}
@@ -718,20 +721,19 @@ class FLV {
     function closeLock($lock_id = 0)
     {
 		if($lock_id) {
-			include(FLV_INCLUDE_PATH."config.php");
-	
+			$this->loadConfig();
 			$this->dbConnect();
 	
 			$sid = session_id();
 			$timeout = time();
 			
-			$tableKey = $config['db_table_prefix']."key";
-			$tableBlock = $config['db_table_prefix']."block";			
+			$tableKey = $this->config['db_table_prefix']."key";
+			$tableBlock = $this->config['db_table_prefix']."block";			
 	
 			$query = "DELETE FROM `".$tableKey."` WHERE `uid` = '$lock_id' AND `sid` LIKE '$sid' AND `key` LIKE '$this->lock_key'";
 	
 			if (!mysql_query($query)) $this->_die(mysql_error());
-			mysql_close($this->$db_link_id);
+			mysql_close($this->db_link_id);
 		}
 		unset($_SESSION[FLV_SECRET_KEY][$this->lock_key]);
 	}
@@ -748,13 +750,12 @@ class FLV {
 		if(!session_id()) session_start();
 		$return = false;
 		if($usedb) {
-			include(FLV_INCLUDE_PATH."config.php");
-	
+			$this->loadConfig();
 			$this->dbConnect();
 			$ip = $_SERVER['REMOTE_ADDR'];
 
-			$tableKey = $config['db_table_prefix']."key";
-			$tableBlock = $config['db_table_prefix']."block";
+			$tableKey = $this->config['db_table_prefix']."key";
+			$tableBlock = $this->config['db_table_prefix']."block";
 			
 			$query = "SELECT count FROM ".$tableBlock." WHERE `ip` LIKE '$ip' LIMIT 1";		
 			$result = mysql_query($query);
@@ -767,8 +768,8 @@ class FLV {
 			$result = mysql_query($query);
 			$rowKey = mysql_fetch_assoc($result);
 
-			if($rowKey['uid'] && ($config['block_counter'] > $rowBlock['count'] || !$rowBlock['count'])) $return = true;
-			elseif($config['block_counter']) {
+			if($rowKey['uid'] && ($this->config['block_counter'] > $rowBlock['count'] || !$rowBlock['count'])) $return = true;
+			elseif($this->config['block_counter']) {
 				$query = "SELECT uid FROM ".$tableBlock." WHERE `ip` LIKE '$ip' LIMIT 1";
 				$result = mysql_query($query);
 				$rowBlock = mysql_fetch_assoc($result);
@@ -778,7 +779,7 @@ class FLV {
 				@mysql_query($query);
 				$this->error[] = FLV_ERROR_BLOCKED;
 			}
-			mysql_close($this->$db_link_id);			
+			mysql_close($this->db_link_id);			
 		} elseif($_SESSION[FLV_SECRET_KEY][$this->lock_key] >= time()) {
 			$return = true;
 		}
@@ -856,11 +857,23 @@ class FLV {
 	*/
     function dbConnect()
     {
-		include(FLV_INCLUDE_PATH."config.php");		
+		$this->loadConfig();
 		// connect to the mysql database server.
-		$this->$db_link_id = mysql_connect ($config['db_host'], $config['db_username'], $config['db_password']);
-		// sellect db		
-		if (!mysql_select_db($config['db_name'])) $this->_die(mysql_error());
+		$this->db_link_id = mysql_connect ($this->config['db_host'], $this->config['db_username'], $this->config['db_password']);
+		// sellect db
+		if (!mysql_select_db($this->config['db_name'])) $this->_die(mysql_error());
+    }
+	
+	/**
+	* Load Config
+	*/
+    function loadConfig()
+    {
+		if( empty($this->config) ) {
+			$config = array();
+			require(FLV_INCLUDE_PATH.'config.php');
+			$this->config = $config;
+		}
     }
 	
 	/**
@@ -871,18 +884,22 @@ class FLV {
     function defaultMetaData($supressGetId3=false)
     {
 		$buffMetaData = array();
-		if(!$supressGetId3){
+
+		if(!$supressGetId3) {
 //			$buffMetaData = $this->FileInfo;
 			$buffMetaData = $this->FileInfo['meta']['onMetaData'];
-
 			$buffMetaData['flv'] = $this->FileInfo['flv'];
 			$buffMetaData['video'] = $this->FileInfo['video'];
 			$buffMetaData['audio'] = $this->FileInfo['audio'];
 			$buffMetaData['bitrate'] = $this->FileInfo['bitrate'];
 		}
+		$buffMetaData['width'] = $this->FileInfo['video']['resolution_x'];
+		$buffMetaData['height'] = $this->FileInfo['video']['resolution_y'];
+		
 		$buffMetaData['metadatacreator'] = 'FLV Editor for PHP '.FLV_VERSION.' (Project: Flv4php)';
 		$buffMetaData['creator'] = 'FLV Editor for PHP '.FLV_VERSION." (Project: Flv4php)";
 		$buffMetaData['metadatadate'] = gmdate('Y-m-d\TH:i:s') . '.000Z';
+
 		return (array) $buffMetaData;
     }
 	

@@ -161,8 +161,12 @@ class getid3_flv
 										break;
 								}
 								break;
-							
 							case GETID3_FLV_VIDEO_SCREEN :
+								$bits = new BitStreamReader(fread($fd, $DataLength));
+									$bits->seek(4, SEEK_CUR);
+									$ThisFileInfo['video']['resolution_x'] = $bits->getInt(12);
+									$bits->seek(4, SEEK_CUR);
+									$ThisFileInfo['video']['resolution_y'] = $bits->getInt(12);								
 								break;
 							case GETID3_FLV_VIDEO_VP6:
 									$bits = new BitStreamReader(fread($fd, $DataLength));
@@ -201,9 +205,9 @@ class getid3_flv
 					
 				    $reader = new AMFReader( fread($fd, $DataLength) );
 					$eventName = $reader->getItem();
-					$ThisFileInfo['meta'][$eventName] = $reader->getItem();
+					if($eventName == 'onMetaData') $ThisFileInfo['meta']['onMetaData'] = $reader->getItem();					
 					unset($reader);
-					
+
 					$ThisFileInfo['video']['frame_rate']   = @$ThisFileInfo['meta']['onMetaData']['framerate'];
 					$ThisFileInfo['video']['resolution_x'] = @$ThisFileInfo['meta']['onMetaData']['width'];
 					$ThisFileInfo['video']['resolution_y'] = @$ThisFileInfo['meta']['onMetaData']['height'];
