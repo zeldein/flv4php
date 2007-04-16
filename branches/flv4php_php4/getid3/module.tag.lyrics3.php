@@ -231,7 +231,8 @@ class getid3_lyrics3
 		$lyricsarray = explode("\r\n", $Lyrics3data['raw']['LYR']);
 		foreach ($lyricsarray as $key => $lyricline) {
 			$regs = array();
-			unset($thislinetimestamps);
+//			unset($thislinetimestamps);
+			$thislinetimestamps = array();
 			while (ereg('^(\\[[0-9]{2}:[0-9]{2}\\])', $lyricline, $regs)) {
 				$thislinetimestamps[] = $this->Lyrics3Timestamp2Seconds($regs[0]);
 				$lyricline = str_replace($regs[0], '', $lyricline);
