@@ -16,7 +16,10 @@ Adding Suport for playback rate change in fulltime movies or area of it
 
 
 Change Log:
-------16/14-2007------
+------24/08-2007------
+Fix: Fixed issue with missing timestamps.
+
+------16/04-2007------
 Fixed: Minor errors
 
 ------18/02-2007------
