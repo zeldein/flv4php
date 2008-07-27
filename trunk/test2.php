@@ -51,7 +51,7 @@ try {
 					$meta['keyframes']['times'][] = $ts;
 	           	}
 	           	
-	            if ( !in_array(FLV_TAG::TYPE_VIDEO, $skipTagTypes) )
+	            if ( !in_array(FLV_Tag::TYPE_VIDEO, $skipTagTypes) )
 	            {
 	                $meta['width'] = $tag->width;
 	                $meta['height'] = $tag->height;
@@ -70,7 +70,7 @@ try {
 		        	$oldTs = $ts;
 	        	}
 	        	
-	            if ( !in_array( FLV_Tag::TYPE_AUDIO, $skipTagTypes) )  
+	            if ( !in_array( FLV_Tag::TYPE_AUDIO, $skipTagTypes) )
 	            {
 		            $meta['audiocodecid'] = $tag->codec;
 		            $meta['audiofreqid'] = $tag->frequency;
