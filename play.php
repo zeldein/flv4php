@@ -48,7 +48,7 @@ class MyFLV extends FLV {
 						$this->compMetaData['keyframes']['times'][] = $ts;
 	           		}
 	           	
-	            	if ( !in_array(FLV_TAG::TYPE_VIDEO, $skipTagTypes) )
+	            	if ( !in_array(FLV_Tag::TYPE_VIDEO, $skipTagTypes) )
 	            	{
 	                	$this->compMetaData['width'] = $tag->width;
 	                	$this->compMetaData['height'] = $tag->height;
@@ -69,7 +69,7 @@ class MyFLV extends FLV {
 		        		$oldTs = $ts;
 	        		}
 	        	
-	            	if ( !in_array( FLV_Tag::TYPE_AUDIO, $skipTagTypes) )  
+	            	if ( !in_array( FLV_Tag::TYPE_AUDIO, $skipTagTypes) )
 	            	{
 		            	$this->compMetaData['audiocodecid'] = $tag->codec;
 		            	$this->compMetaData['audiofreqid'] = $tag->frequency;
